@@ -59,9 +59,10 @@ if (process.env.NODE_ENV === 'production') {
   app.use(express.static(buildPath));
 
   // All other requests should serve React index.html
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(buildPath, 'index.html'));
-  });
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__buildPath, 'index.html'));
+});
+;
 }
 
 // Global error handler
