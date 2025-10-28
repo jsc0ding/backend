@@ -12,60 +12,37 @@ import complaintRoutes from './routes/complaintRoutes.js';
 import serviceAppointmentRoutes from './routes/serviceAppointmentRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
+import connectDB from './config/db.js';
 
 // Load environment variables
 dotenv.config();
 
-// Database configuration
-import connectDB from './config/db.js';
-
+// Initialize app and server
 const app = express();
 const server = http.createServer(app);
-const PORT = process.env.PORT || 5000; // Use PORT from environment or default to 5000
+const PORT = process.env.PORT || 5000;
 
 // Connect to MongoDB
 connectDB();
 
 // Security middleware
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "http://localhost:3000", "http://localhost:3002", "http://localhost:3006", "http://localhost:5000"],
-      imgSrc: ["'self'", "data:", "https:"],
-      fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      connectSrc: [
-        "'self'",
-        "https:",
-        "http://localhost:3000",
-        "http://localhost:3002",
-        "http://localhost:3006",
-        "http://localhost:5000",
-        "http://localhost:5000",
-        "ws://localhost:5000"
-      ],
-      frameSrc: ["'self'"]
-    }
-  },
-  // Only enable HSTS in production
-  hsts: process.env.NODE_ENV === 'production'
-}));
-
-// Add CORS middleware before all routes as specified in instructions
-app.use(cors({ 
-  origin: ['http://localhost:3000', 'http://localhost:3002', 'http://localhost:3006', 'http://localhost:5000'], 
+app.use(helmet());
+app.use(cors({
+  origin: [
+    'http://localhost:3000',
+    'http://localhost:3002',
+    'http://localhost:3006',
+    'http://localhost:5000'
+  ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   exposedHeaders: ['Authorization']
 }));
-
-// Add express.json() as specified in instructions
 app.use(express.json());
-app.use(express.urlencoded({ extended: true })); // Add URL encoded support
+app.use(express.urlencoded({ extended: true }));
 
-// Routes
+// API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/queue/doctors', doctorRoutes);
@@ -73,62 +50,51 @@ app.use('/api/queue/appointments', appointmentRoutes);
 app.use('/api/queue/complaints', complaintRoutes);
 app.use('/api/queue/service-appointments', serviceAppointmentRoutes);
 
-// Serve static files from the React app build directory (only in production)
+// Serve React build in production
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// if (process.env.NODE_ENV === 'production') {
-//   const __buildPath = path.join(__dirname, '../client/build');
-//   app.use(express.static(__buildPath));
+if (process.env.NODE_ENV === 'production') {
+  const buildPath = path.join(__dirname, '../client/build');
+  app.use(express.static(buildPath));
 
-  // Barcha so‘rovlarni React build fayliga yo‘naltirish
-  app.get(/.*/, (req, res) => {
-    res.sendFile(path.join(__buildPath, 'index.html'));
+  // All other requests should serve React index.html
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(buildPath, 'index.html'));
   });
+}
 
-
-// Global error handling middleware
+// Global error handler
 app.use((err, req, res, next) => {
   console.error('🔥 ERROR DETAILS:', err);
-  
-  // Determine status code
   const statusCode = res.statusCode !== 200 ? res.statusCode : 500;
-  
   res.status(statusCode).json({
     message: err.message || 'Something went wrong!',
     stack: process.env.NODE_ENV !== 'production' ? err.stack : undefined,
-    ...(process.env.NODE_ENV === 'development' && { error: err })
   });
 });
 
-// Socket.IO setup with CORS
+// Socket.IO setup
 const io = new Server(server, {
   cors: {
     origin: ['http://localhost:3000', 'http://localhost:3006', 'http://localhost:5000'],
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     credentials: true,
-    allowedHeaders: ["Content-Type", "Authorization"],
-    exposedHeaders: ["Authorization"]
-  }
+  },
 });
 
-// Socket.IO connection handling
+// Socket connection
 io.on('connection', (socket) => {
-  socket.on('disconnect', () => {
-  });
+  console.log('🟢 User connected to Socket.IO');
+  socket.on('disconnect', () => console.log('🔴 User disconnected'));
 });
 
-// Emit event when a new appointment is created
-const emitNewAppointment = (appointment) => {
+// Emit event when new appointment is created
+global.emitNewAppointment = (appointment) => {
   io.emit('newAppointment', appointment);
 };
 
-// Make emitNewAppointment available globally
-global.emitNewAppointment = emitNewAppointment;
-
 // Start server
-console.log('PORT from environment:', process.env.PORT);
-console.log('Using PORT:', PORT);
-server.listen(PORT, '0.0.0.0', () => { // Listen on all interfaces
-  console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`✅ Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
 });
