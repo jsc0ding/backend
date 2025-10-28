@@ -87,14 +87,17 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
-
-
 // Global error handling middleware
 app.use((err, req, res, next) => {
-  console.error(err.stack); // Log error for debugging
-  res.status(500).json({ 
-    message: 'Something went wrong!',
-    ...(process.env.NODE_ENV !== 'production' && { error: err.message })
+  console.error('🔥 ERROR DETAILS:', err);
+  
+  // Determine status code
+  const statusCode = res.statusCode !== 200 ? res.statusCode : 500;
+  
+  res.status(statusCode).json({
+    message: err.message || 'Something went wrong!',
+    stack: process.env.NODE_ENV !== 'production' ? err.stack : undefined,
+    ...(process.env.NODE_ENV === 'development' && { error: err })
   });
 });
 
