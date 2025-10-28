@@ -77,15 +77,15 @@ app.use('/api/queue/service-appointments', serviceAppointmentRoutes);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-if (process.env.NODE_ENV === 'production') {
-  const __buildPath = path.join(__dirname, '../client/build');
-  app.use(express.static(__buildPath));
+// if (process.env.NODE_ENV === 'production') {
+//   const __buildPath = path.join(__dirname, '../client/build');
+//   app.use(express.static(__buildPath));
 
   // Barcha so‘rovlarni React build fayliga yo‘naltirish
   app.get(/.*/, (req, res) => {
     res.sendFile(path.join(__buildPath, 'index.html'));
   });
-}
+
 
 // Global error handling middleware
 app.use((err, req, res, next) => {
