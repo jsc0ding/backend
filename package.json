@@ -12,7 +12,7 @@
     "dev": "nodemon server.js",
     "create-admin": "node scripts/createAdmin.js",
     "test-connection": "node testConnection.js",
-    "verify-build": "node ../scripts/verify-build.js",
+    "verify-build": "node scripts/verify-build.js",
     "prestart": "npm run verify-build"
   },
   "dependencies": {
