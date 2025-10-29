@@ -21,7 +21,7 @@ import connectDB from './config/db.js';
 
 const app = express();
 const server = http.createServer(app);
-const PORT = process.env.PORT || 5000; // Use PORT from environment or default to 5000
+const PORT = process.env.PORT || 5012; // Changed default to 5012 to match client proxy
 
 // Connect to MongoDB
 connectDB();
@@ -32,7 +32,7 @@ app.use(helmet({
     directives: {
       defaultSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "http://localhost:3000", "http://localhost:3002", "http://localhost:3006", "http://localhost:5000"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "http://localhost:3000", "http://localhost:3002", "http://localhost:3006", "http://localhost:5000", "http://localhost:5012"],
       imgSrc: ["'self'", "data:", "https:"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       connectSrc: [
@@ -42,8 +42,12 @@ app.use(helmet({
         "http://localhost:3002",
         "http://localhost:3006",
         "http://localhost:5000",
-        "http://localhost:5000",
-        "ws://localhost:5000"
+        "http://localhost:5012",
+        "ws://localhost:3000",
+        "ws://localhost:3002",
+        "ws://localhost:3006",
+        "ws://localhost:5000",
+        "ws://localhost:5012"
       ],
       frameSrc: ["'self'"]
     }
@@ -54,7 +58,7 @@ app.use(helmet({
 
 // Add CORS middleware before all routes as specified in instructions
 app.use(cors({ 
-  origin: ['http://localhost:3000', 'http://localhost:3002', 'http://localhost:3006', 'http://localhost:5000'], 
+  origin: ['http://localhost:3000', 'http://localhost:3002', 'http://localhost:3006', 'http://localhost:5000', 'http://localhost:5012'], 
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -77,24 +81,34 @@ app.use('/api/queue/service-appointments', serviceAppointmentRoutes);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__buildPath, 'index.html'));
-});
+if (process.env.NODE_ENV === 'production') {
+  const __buildPath = path.join(__dirname, '../client/build');
+  app.use(express.static(__buildPath));
 
+  // Barcha so‘rovlarni React build fayliga yo‘naltirish
+  app.get(/.*/, (req, res) => {
+    res.sendFile(path.join(__buildPath, 'index.html'));
+  });
+}
 
 // Global error handling middleware
 app.use((err, req, res, next) => {
-  console.error(err.stack); // Log error for debugging
-  res.status(500).json({ 
-    message: 'Something went wrong!',
-    ...(process.env.NODE_ENV !== 'production' && { error: err.message })
+  console.error('🔥 ERROR DETAILS:', err);
+  
+  // Determine status code
+  const statusCode = res.statusCode !== 200 ? res.statusCode : 500;
+  
+  res.status(statusCode).json({
+    message: err.message || 'Something went wrong!',
+    stack: process.env.NODE_ENV !== 'production' ? err.stack : undefined,
+    ...(process.env.NODE_ENV === 'development' && { error: err })
   });
 });
 
 // Socket.IO setup with CORS
 const io = new Server(server, {
   cors: {
-    origin: ['http://localhost:3000', 'http://localhost:3006', 'http://localhost:5000'],
+    origin: ['http://localhost:3000', 'http://localhost:3002', 'http://localhost:3006', 'http://localhost:5000', 'http://localhost:5012'],
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization"],
