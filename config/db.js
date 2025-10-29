@@ -8,10 +8,12 @@ const connectDB = async () => {
     console.log('Attempting to connect to MongoDB...');
     console.log('Using URI:', mongoURI);
     
-    // Connect with timeout options for Atlas
+    // Connect with timeout options for Atlas and auto-reconnect settings
     const conn = await mongoose.connect(mongoURI, {
       serverSelectionTimeoutMS: 10000, // 10 second timeout
       socketTimeoutMS: 45000, // 45 second socket timeout
+      heartbeatFrequencyMS: 10000, // 10 second heartbeat
+      autoIndex: true, // Auto-indexing
     });
 
     console.log('✅ MongoDB Connected Successfully!');
@@ -24,7 +26,17 @@ const connectDB = async () => {
     });
     
     mongoose.connection.on('disconnected', () => {
-      console.log('MongoDB disconnected');
+      console.log('MongoDB disconnected. Attempting to reconnect...');
+      // Attempt to reconnect
+      setTimeout(connectDB, 5000);
+    });
+    
+    mongoose.connection.on('reconnected', () => {
+      console.log('MongoDB reconnected successfully!');
+    });
+    
+    mongoose.connection.on('close', () => {
+      console.log('MongoDB connection closed.');
     });
     
   } catch (error) {
@@ -43,8 +55,11 @@ const connectDB = async () => {
       console.error('5. Try connecting with MongoDB Compass using the same URI');
     }
     
-    console.log('\n⚠️  Server will continue running without database connection');
+    // Attempt to reconnect after 5 seconds
+    console.log('\n🔄 Attempting to reconnect in 5 seconds...');
+    setTimeout(connectDB, 5000);
   }
 };
 
+// Export the connection function
 export default connectDB;
