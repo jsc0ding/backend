@@ -9,31 +9,41 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Adjust path for server context - look in parent directory
-const buildPath = path.join(__dirname, '../../client/build');
-const indexPath = path.join(buildPath, 'index.html');
+// Try multiple possible paths for different environments
+const possiblePaths = [
+  path.join(__dirname, '../client/build'), // Render deployment structure
+  path.join(__dirname, '../../client/build'), // Local development structure
+  path.join(process.cwd(), '../client/build'), // Alternative Render structure
+  path.join(process.cwd(), 'client/build') // Another possible structure
+];
 
 console.log('🔍 Checking build directory...');
 
-if (fs.existsSync(buildPath)) {
-  console.log('✅ Build directory exists');
+// Try each possible path
+for (const buildPath of possiblePaths) {
+  console.log(`Checking path: ${buildPath}`);
   
-  if (fs.existsSync(indexPath)) {
-    console.log('✅ index.html found');
-    console.log('🎉 Build verification successful!');
-    process.exit(0);
-  } else {
-    console.log('❌ index.html not found in build directory');
-    console.log('Contents of build directory:');
-    try {
-      const files = fs.readdirSync(buildPath);
-      console.log(files);
-    } catch (err) {
-      console.log('Error reading build directory:', err.message);
+  if (fs.existsSync(buildPath)) {
+    console.log('✅ Build directory found at:', buildPath);
+    const indexPath = path.join(buildPath, 'index.html');
+    
+    if (fs.existsSync(indexPath)) {
+      console.log('✅ index.html found');
+      console.log('🎉 Build verification successful!');
+      process.exit(0);
+    } else {
+      console.log('❌ index.html not found in build directory');
+      console.log('Contents of build directory:');
+      try {
+        const files = fs.readdirSync(buildPath);
+        console.log(files);
+      } catch (err) {
+        console.log('Error reading build directory:', err.message);
+      }
     }
-    process.exit(1);
   }
-} else {
-  console.log('❌ Build directory does not exist at:', buildPath);
-  process.exit(1);
 }
+
+console.log('❌ Build directory does not exist at any of the expected locations:');
+possiblePaths.forEach(p => console.log('  -', p));
+process.exit(1);
