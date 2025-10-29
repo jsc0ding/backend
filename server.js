@@ -12,6 +12,7 @@ import complaintRoutes from './routes/complaintRoutes.js';
 import serviceAppointmentRoutes from './routes/serviceAppointmentRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
+import fs from 'fs';
 
 // Load environment variables
 dotenv.config();
@@ -83,12 +84,31 @@ const __dirname = path.dirname(__filename);
 
 if (process.env.NODE_ENV === 'production') {
   const __buildPath = path.join(__dirname, '../client/build');
-  app.use(express.static(__buildPath));
-
-  // Barcha so‘rovlarni React build fayliga yo‘naltirish
-  app.get(/.*/, (req, res) => {
-    res.sendFile(path.join(__buildPath, 'index.html'));
-  });
+  
+  // Check if build directory exists
+  if (fs.existsSync(__buildPath)) {
+    // Serve static files
+    app.use(express.static(__buildPath));
+    
+    // Serve index.html for all non-API routes
+    app.get('*', (req, res) => {
+      // Don't serve index.html for API routes
+      if (req.path.startsWith('/api/')) {
+        return;
+      }
+      res.sendFile(path.join(__buildPath, 'index.html'));
+    });
+  } else {
+    // Fallback if build directory doesn't exist
+    console.log('⚠️  Build directory not found, serving API only');
+    app.get('/', (req, res) => {
+      res.json({ 
+        message: 'Hospital Management API Server', 
+        status: 'running',
+        note: 'Frontend build not found - API endpoints available at /api/*'
+      });
+    });
+  }
 }
 
 // Global error handling middleware
