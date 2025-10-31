@@ -22,7 +22,7 @@ import connectDB from './config/db.js';
 
 const app = express();
 const server = http.createServer(app);
-const PORT = process.env.PORT || 5012;
+const PORT = process.env.PORT || 5002;
 
 // Connect to MongoDB
 connectDB();
@@ -33,14 +33,12 @@ app.use(helmet({
     directives: {
       defaultSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "https://hospitalback-l4xk.onrender.com", "https://neon-bunny-52317b.netlify.app"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", "data:", "https:"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       connectSrc: [
         "'self'",
-        "https://hospitalback-l4xk.onrender.com",
-        "https://neon-bunny-52317b.netlify.app",
-        "wss://hospitalback-l4xk.onrender.com"
+        ...(process.env.NODE_ENV === 'development' ? ["http://localhost:3002", "ws://localhost:*"] : [])
       ],
       frameSrc: ["'self'"]
     }
@@ -49,9 +47,13 @@ app.use(helmet({
   hsts: process.env.NODE_ENV === 'production'
 }));
 
-// Add CORS middleware before all routes as specified in instructions
+// Add CORS middleware before all routes
+const allowedOrigins = process.env.NODE_ENV === 'production' 
+  ? [process.env.FRONTEND_URL || 'https://shifoxona-app.onrender.com']
+  : ['http://localhost:3002', 'http://localhost:3000'];
+
 app.use(cors({ 
-  origin: ['https://hospitalback-l4xk.onrender.com', 'http://localhost:3002', 'https://neon-bunny-52317b.netlify.app'], 
+  origin: allowedOrigins, 
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -61,28 +63,6 @@ app.use(cors({
 // Add express.json() as specified in instructions
 app.use(express.json());
 app.use(express.urlencoded({ extended: true })); // Add URL encoded support
-
-// Add explicit CORS handling for all routes
-app.use((req, res, next) => {
-  console.log(`CORS Middleware - ${req.method} ${req.path}`);
-  // Set CORS headers
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, X-API-Key');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.header('Access-Control-Max-Age', '86400'); // 24 hours
-  
-  // Handle preflight requests
-  if (req.method === 'OPTIONS') {
-    console.log('Handling OPTIONS request');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, X-API-Key');
-    res.status(200).send();
-    return;
-  }
-  
-  next();
-});
 
 // Routes
 console.log('Setting up API routes');
@@ -119,7 +99,7 @@ app.use('/api/queue/service-appointments', (req, res, next) => {
 // Socket.IO setup with CORS
 const io = new Server(server, {
   cors: {
-    origin: ['https://hospitalback-l4xk.onrender.com', 'http://localhost:3002', 'https://neon-bunny-52317b.netlify.app'],
+    origin: allowedOrigins,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization"],

@@ -14,8 +14,9 @@ const sendTelegramNotification = async (appointment) => {
     console.log('=== Telegram Notification Function Called ===');
     console.log('Appointment data received:', JSON.stringify(appointment, null, 2));
     
-    const token = process.env.BOT_TOKEN || process.env.TELEGRAM_BOT_TOKEN;
-    const chatId = process.env.CHAT_ID || process.env.TELEGRAM_CHAT_ID;
+    // Use consistent environment variable names
+    const token = process.env.BOT_TOKEN;
+    const chatId = process.env.CHAT_ID;
 
     console.log('Environment variables check:');
     console.log('- BOT_TOKEN:', token ? 'SET' : 'MISSING');
@@ -109,8 +110,9 @@ const sendTelegramNotification = async (appointment) => {
  */
 const sendComplaintNotification = async (complaint) => {
   try {
-    const token = process.env.BOT_TOKEN || process.env.TELEGRAM_BOT_TOKEN;
-    const chatId = process.env.CHAT_ID || process.env.TELEGRAM_CHAT_ID;
+    // Use consistent environment variable names
+    const token = process.env.BOT_TOKEN;
+    const chatId = process.env.CHAT_ID;
 
     // Validate environment variables
     if (!token || !chatId) {
@@ -167,8 +169,9 @@ ${complaint.phone ? `📞 ${complaint.phone}` : ''}
  */
 const sendServiceAppointmentNotification = async (serviceAppointment) => {
   try {
-    const token = process.env.BOT_TOKEN || process.env.TELEGRAM_BOT_TOKEN;
-    const chatId = process.env.CHAT_ID || process.env.TELEGRAM_CHAT_ID;
+    // Use consistent environment variable names
+    const token = process.env.BOT_TOKEN;
+    const chatId = process.env.CHAT_ID;
 
     // Validate environment variables
     if (!token || !chatId) {
