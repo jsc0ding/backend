@@ -49,16 +49,43 @@ app.use(helmet({
 
 // Add CORS middleware before all routes
 const allowedOrigins = process.env.NODE_ENV === 'production' 
-  ? [process.env.FRONTEND_URL || 'https://shifoxona-app.onrender.com']
-  : ['http://localhost:3002', 'http://localhost:3000'];
+  ? [
+      process.env.FRONTEND_URL || 'https://shifoxona-app.onrender.com',
+      'https://frontend-1-ixqz.onrender.com',
+      'http://localhost:3002', 
+      'http://localhost:3000'
+    ]
+  : [
+      'http://localhost:3002', 
+      'http://localhost:3000', 
+      'https://frontend-1-ixqz.onrender.com'
+    ];
 
 app.use(cors({ 
-  origin: allowedOrigins, 
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.log('CORS blocked origin:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  exposedHeaders: ['Authorization']
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+  exposedHeaders: ['Authorization'],
+  optionsSuccessStatus: 200 // Some legacy browsers choke on 204
 }));
+
+// Debug middleware to log all requests
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.path} - Origin: ${req.get('Origin') || 'No origin'}`);
+  console.log('Allowed origins:', allowedOrigins);
+  next();
+});
 
 // Add express.json() as specified in instructions
 app.use(express.json());
